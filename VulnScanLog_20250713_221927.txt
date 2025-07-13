@@ -1,0 +1,5 @@
+[VULNERABILITY SCAN STARTED] 13/07/2025 22:19:27 on ****************
+2025-07-13 22:19:27 - [VULNERABILITY SCAN] Starting Scan On *************
+2025-07-13 22:19:29 - [HTTP] Port 80 not accessible or server not responsive.
+2025-07-13 22:19:31 - [FTP] Port 21 - Not Accessible or server not responsive.
+2025-07-13 22:19:31 - [SMB] Port 445 is open - potential for null session (requires deeper inspection.
