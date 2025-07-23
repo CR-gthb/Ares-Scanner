@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 /// This was created for ethical and pentesting purposes only
 /// Please use for ethical reasons.
 /// AI was used to help teach me within this context and was used to aid me into correct directions.
-namespace Cs_PortScanner
+namespace Ares_Scanner
 {
     internal class Program
     {
@@ -216,7 +216,7 @@ namespace Cs_PortScanner
             return await menuSelect();
         }
 
-        public string IPInputValidation() 
+        public string IPInputValidation()
         { //validate IP input
             while (true)
             {//loops
@@ -269,35 +269,36 @@ namespace Cs_PortScanner
 
         public async Task<bool> VulnerabilityScan() //I use multiple methods within this, like checking apache FTP and so on..
         {
-Console.WriteLine("Enter IP to Scan For Vulnerability..");
-    _ip = IPInputValidation();
+            Console.WriteLine("Enter IP to Scan For Vulnerability..");
+            _ip = IPInputValidation();
 
-    // Create vulnerability-specific log file
-    string originalLogFile = _logFilePath; // backup original if needed
-    string vulnLogPath = CreateVulnerabilityLogFile();
+            // Create vulnerability-specific log file
+            string originalLogFile = _logFilePath; // backup original if needed
+            string vulnLogPath = CreateVulnerabilityLogFile();
 
-    // Temporarily override logging target
-    File.AppendAllText(vulnLogPath, $"[VULNERABILITY SCAN STARTED] {DateTime.Now} on {_ip}{Environment.NewLine}");
+            // Temporarily override logging target
+            File.AppendAllText(vulnLogPath, $"[VULNERABILITY SCAN STARTED] {DateTime.Now} on {_ip}{Environment.NewLine}");
 
-    // Log wrapper for this scan only
-    void LogToVulnFile(string message)
-    {
-        string entry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}{Environment.NewLine}";
-        File.AppendAllText(vulnLogPath, entry);
-        Console.WriteLine(message);
-    }
+            // Log wrapper for this scan only
+            void LogToVulnFile(string message)
+            {
+                string entry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}{Environment.NewLine}";
+                File.AppendAllText(vulnLogPath, entry);
+                Console.WriteLine(message);
+            }
 
-    LogToVulnFile($"[VULNERABILITY SCAN] Starting Scan On {_ip}");
+            LogToVulnFile($"[VULNERABILITY SCAN] Starting Scan On {_ip}");
             await CommonWebVulnerabilities(LogToVulnFile); //checking for web vulnerabilities
             await OpenFTP(LogToVulnFile); //checking for file transfer is open/used
             await SMBNullSessions(LogToVulnFile); // checking for SMB Null Sessions
+            await SSHVersionCheck(LogToVulnFile); // scanning port 22 SSH
 
             Console.WriteLine("Scan complete, Press [ENTER] to return to the menu...");
             while (Console.ReadKey(true).Key != ConsoleKey.Enter) { }
             return await menuSelect(); //this is just preventing the user from accidentally hitting the wrong key and skipping ahead
         }
 
-        private async Task CommonWebVulnerabilities(Action<string>log)
+        private async Task CommonWebVulnerabilities(Action<string> log)
         {
             try
             {
@@ -334,7 +335,7 @@ Console.WriteLine("Enter IP to Scan For Vulnerability..");
             }
         }
 
-        private async Task OpenFTP(Action<string>log)
+        private async Task OpenFTP(Action<string> log)
         {
             try
             {
@@ -374,7 +375,57 @@ Console.WriteLine("Enter IP to Scan For Vulnerability..");
                 log("[SMB] Port 445 - Not Accessible");
             }
         }
+
+        private async Task SSHVersionCheck(Action<string> log)
+        {
+            try
+            {
+                using (var client = new TcpClient())
+                {
+                    await client.ConnectAsync(_ip, 22); //scanning port 22 which is used for ssh :)
+                    using (var stream = client.GetStream())
+                    using (var reader = new StreamReader(stream))
+                    {
+                        stream.ReadTimeout = 3000;
+                        string banner = await reader.ReadLineAsync();
+                        if (!string.IsNullOrEmpty(banner))
+                        {
+                            log($"[SSH] Banner: {banner}");
+
+                            if (banner.Contains("OpenSSH"))
+                            {
+                                var versionMatch = Regex.Match(banner, @"OpenSSH[_\-]([0-9.]+)");
+                                string[] vulnerableSSHVersions = { "7.2", "7.6", "8.2" };
+                                if (versionMatch.Success)
+                                {
+                                    string version = versionMatch.Groups[1].Value;
+                                    log($"[SSH] Detected OpenSSH Version: {version}");
+
+                                    if (vulnerableSSHVersions.Contains(version))
+                                    {
+                                        log("[VULNERABLE] Detected potentially vulnerable OpenSSH version.");
+                                    }
+                                }
+                            }
+                        }
+
+                        else 
+                        {                        
+                            log("[SSH] No banner recieved, but port 22 is open...");
+                        }
+                    }
+                }
+
+            }
+
+            catch(Exception ex) 
+            {
+                log($"[SSH] Error checking SSH on {_ip}: {ex.Message}");
+            }
+        }
     }
 }
+
+///This project was extremely fun to work on and it was for educational and self development based reasons as to why I created this.
 
 
